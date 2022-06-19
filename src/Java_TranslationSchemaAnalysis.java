@@ -39,7 +39,7 @@ public class Java_TranslationSchemaAnalysis {
     private static HashSet<String> keywords = new HashSet<>(Arrays.asList("if", "then", "else", "int", "real"));
 
     //操作符
-    private static HashSet<String> operator = new HashSet<>(Arrays.asList("+","-","*","/","(",")"));
+    private static HashSet<String> operator = new HashSet<>(Arrays.asList("+", "-", "*", "/", "(", ")"));
 
     //用于记录标识符及其属性值
     private static HashMap<String, Attribute> ID_Attribute = new HashMap<>();
@@ -50,27 +50,27 @@ public class Java_TranslationSchemaAnalysis {
      */
     private static void lexical_analysis() {
         int cnt = 1;
-        StringBuilder word = new StringBuilder();
-        //分词
+        StringBuffer stringBuffer = new StringBuffer();
+        //分词 一个一个字符地读入
         for (int i = 0; i < prog.length(); i++) {
             if (prog.charAt(i) == '\0') { //遇到结束符
-                if (word.length() > 0) {
-                    input.add(new Token(word.toString(), cnt));
-                    word.delete(0, word.length());
+                if (stringBuffer.length() > 0) {
+                    input.add(new Token(stringBuffer.toString(), cnt));
+                    stringBuffer.delete(0, stringBuffer.length()); //清空string buffer
                 }
                 break; //跳出循环
             } else if (prog.charAt(i) == '\n') {
-                if (word.length() > 0) {
-                    input.add(new Token(word.toString(), cnt++)); //遇到换行符 cnt++
-                    word.delete(0, word.length());
+                if (stringBuffer.length() > 0) {
+                    input.add(new Token(stringBuffer.toString(), cnt++)); //遇到换行符 cnt++
+                    stringBuffer.delete(0, stringBuffer.length()); //清空string buffer
                 }
             } else if (prog.charAt(i) == ' ') {
-                if (word.length() > 0) {
-                    input.add(new Token(word.toString(), cnt)); //遇到空格 加入input
-                    word.delete(0, word.length());
+                if (stringBuffer.length() > 0) {
+                    input.add(new Token(stringBuffer.toString(), cnt)); //遇到空格 加入input
+                    stringBuffer.delete(0, stringBuffer.length()); //清空string buffer
                 }
             } else {
-                word.append(prog.charAt(i)); //否则就压入word中
+                stringBuffer.append(prog.charAt(i)); //否则就压入word中
             }
         }
     }
@@ -79,7 +79,7 @@ public class Java_TranslationSchemaAnalysis {
      * 初始化:识别input中的identifier，放入属性表中
      */
     private static void init() {
-        for(Token token: input) {
+        for (Token token : input) {
             //开头为单词 且不属于关键字————>标识符
             if (Character.isAlphabetic(token.getToken().charAt(0)) && !keywords.contains(token.getToken())) {
                 //初使状态设为void 值设为0
@@ -117,8 +117,8 @@ public class Java_TranslationSchemaAnalysis {
 //                        break; //跳出程序
                     }
                     //input.get(i+4) --> 分号
-                    String deli = input.get(i + 4).getToken();
-                    if (deli.equals(";")) { //如果i+4处是分号
+                    String semi = input.get(i + 4).getToken();
+                    if (semi.equals(";")) { //如果i+4处是分号
                         i += 4; // i+4, 跳到分号处
                         continue;
                     } else { //如果不是分号 错误处理2: missingSemi_error
@@ -261,7 +261,7 @@ public class Java_TranslationSchemaAnalysis {
                     opStack.pop(); //同时pop出左括号
                 } else { //否则 --> 遇到其他运算符
                     //比较操作符与栈顶符号的优先级 如果当前符号优先级更高 那么将其入栈
-                    //否则就pop并加入后缀表达式 直至遇到优先级 < 当前符号的 然后再入栈
+                    //否则就pop并加入后缀表达式 直至遇到优先级 小于 当前符号的 然后再入栈
                     while (!opStack.empty() && comparePriority(opStack.peek().getToken(), currentInput))
                         postfixExpr.add(opStack.pop());
                     opStack.push(input.get(i));
@@ -274,7 +274,7 @@ public class Java_TranslationSchemaAnalysis {
         //当运算符栈不为空
         while (!opStack.empty())
             postfixExpr.add(opStack.pop());
-        //后缀表达式的计算 --借助辅助栈numSatck
+        //后缀表达式的计算 --借助辅助栈numStack
         //numStack：存储运算数的栈
         Stack<Double> numStack = new Stack<>();
         //遍历后缀表达式
@@ -314,8 +314,14 @@ public class Java_TranslationSchemaAnalysis {
                 numStack.push(res);
             } else {
                 //否则遇到操作数直接push入numStack
+                //注意操作数可能不存在与属性表中 如1.0 将属性置为null
                 Attribute attribute = ID_Attribute.getOrDefault(token.getToken(), null);
-                numStack.push(attribute == null ? Double.parseDouble(token.getToken()) : attribute.getValue());
+                //若操作数在属性表中，如a,则getValue
+                if (attribute != null) {
+                    numStack.push(attribute.getValue());
+                } else { //如果是数值而不是变量（不出现在ID_Attribute中）
+                    numStack.push(Double.parseDouble(token.getToken())); //string 转double
+                }
             }
         }
         //遍历完后缀表达式，最后栈里剩下的数就是计算结果，设置为当前id的属性值
@@ -346,6 +352,7 @@ public class Java_TranslationSchemaAnalysis {
 
     /**
      * 判断是否是运算符operator
+     *
      * @param token
      * @return
      */
@@ -451,6 +458,5 @@ public class Java_TranslationSchemaAnalysis {
             this.lineNum = lineNum;
         }
     }
-
 
 }
